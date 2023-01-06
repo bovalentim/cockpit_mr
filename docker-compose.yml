@@ -1,0 +1,24 @@
+version: '2'
+services:
+    cockpit_mr:
+        build: .
+        ports:
+            - 8501:8501
+        volumes:
+            - ./:/cockpit_mr
+        networks:
+            app-network:
+                ipv4_address: 10.5.0.5
+        restart: always
+        environment:
+          DB_RISK: ${DB_RISK}
+          DB_BH: ${DB_BH}
+          ENV: production
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+        config:
+            - subnet: 10.5.0.0/16
+              gateway: 10.5.0.1
