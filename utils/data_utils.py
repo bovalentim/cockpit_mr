@@ -47,23 +47,59 @@ select fin.financiamento_id,
 
     return df_responsaveis
 
-def get_nfe_assessment(financiamento_id):
-    # DB_SOLFACIL
+def get_nfe_assessment():
     URI = os.getenv("DB_RISK")
-    query_formalizados = f"""
-select * from (
-select row_number() over (partition by nfe_key  order by created_at desc) as assessment_index,
-na.* 
-from nfe_assessment na
-) tb 
-where assessment_index = 1
---and id_financiamento = '497614'
-and id_financiamento = {financiamento_id}
-order by created_at desc
---group by 1 order by 2 desc
+    query = f"""select fin.financiamento_criado_em,
+fin.financiamento_id,
+nfa.has_file,
+nfa.read_nfe,
+nfa.parsed_nfe,
+nfa.rs_watt_nfe,
+fin.valor_do_projeto,
+fin.valor_financiado,
+--fin.etapa,
+--fin.status,
+--fin.num_etapa,
+nfa.nfe_key as nfkey,
+nfp.cpf_cnpj_nfe,
+nfp.numero_nfe,
+nfp.cfop_nfe,
+nfp.valor_nfe,
+nfp.potencia_nfe,
+nfp.city_nfe,
+nfp.uf_nfe,
+nfp.financiamento_id as fin_id_nfp,
+nfp.status_nfe,
+nfa.match_cpf,
+nfa.match_cep,
+nfa.match_numero,
+nfa.match_rua,
+nfa.match_valor_financiado,
+nfa.match_valor_equipamento,
+nfa.match_cidade,
+nfa.match_uf,
+nfa.match_potencia,
+nfa.list_files,
+nfa.has_file,
+nfa.match_fornecedor,
+nfa.has_boleto,
+nfa.has_multiple_files,
+nfa.has_comission,
+nfa.has_insurance
+
+from financiamentos fin
+left join (select *,
+row_number() over (partition by financiamento_id order by created_at desc) as index 
+from nfe_parsed) nfp on fin.financiamento_id::varchar = nfp.financiamento_id::varchar and nfp.index = 1
+left join (select *,
+row_number() over (partition by id_financiamento order by created_at desc) as index 
+from nfe_assessment) nfa on fin.financiamento_id::varchar = nfa.id_financiamento::varchar and nfa.index = 1
+where fin.formalizado = 'Formalizado'
+and num_etapa > 10 and num_etapa < 14
+order by formalizado_em desc
     """
     with connect_postgres(URI) as conn:
-        df_responsaveis = pd.read_sql(query_formalizados, conn)
+        df = pd.read_sql(query, conn)
 
-    return df_responsaveis
+    return df
 
